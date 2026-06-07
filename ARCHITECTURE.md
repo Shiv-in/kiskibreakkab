@@ -1,6 +1,6 @@
 # Technical Architecture & Design Patterns - KBK
 
-This document provides a deep dive into the technical structure of KBK. Use this to understand the "Why" and "How" behind the codebase for investor pitches or technical interviews.
+This document provides a deep dive into the technical structure of KBK. Use this to understand the "Why" and "How" behind the codebase.
 
 ## 1. High-Level Architectural Pattern: Clean Architecture + MVVM
 
