@@ -132,16 +132,19 @@ fun WelcomeBanner(userName: String) {
                         lineHeight = 32.sp
                     )
                 }
-                Column(){Text(
-                    text = "BREAK",
-                    color = KiskiRed,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
-                    lineHeight = 24.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End
-                )
-                Text(
-                    text = "BREAK",
+                Column(){
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "BREAK",
+                        color = KiskiRed,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 24.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End
+                    )
+                    Text(
+                    text = "TIME",
                     color = KiskiRed,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Black,

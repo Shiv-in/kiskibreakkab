@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TimetableDao {
-    @Query("SELECT * FROM timetable ORDER BY day, slotNumber ASC")
-    fun getAllSlots(): Flow<List<TimetableEntity>>
+    @Query("SELECT * FROM timetable WHERE userId = :userId ORDER BY day, slotNumber ASC")
+    fun getAllSlots(userId: String): Flow<List<TimetableEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSlot(slot: TimetableEntity)
@@ -17,6 +17,9 @@ interface TimetableDao {
 
     @Update
     suspend fun updateSlot(slot: TimetableEntity)
+
+    @Query("DELETE FROM timetable WHERE userId = :userId")
+    suspend fun clearUserTimetable(userId: String)
 
     @Query("DELETE FROM timetable")
     suspend fun clearAll()

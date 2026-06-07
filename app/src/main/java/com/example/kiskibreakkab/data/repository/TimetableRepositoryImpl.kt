@@ -19,28 +19,27 @@ class TimetableRepositoryImpl @Inject constructor(
 ) : TimetableRepository {
 
     private val repositoryScope = CoroutineScope(Dispatchers.IO)
-
-    private var isSyncing = false
+    private val activeSyncs = mutableSetOf<String>()
 
     override fun getTimetable(userId: String): Flow<List<TimetableSlot>> {
-        // Trigger background synchronization from cloud if not already syncing
-        if (!isSyncing) {
+        // Trigger background synchronization from cloud if not already syncing for this user
+        if (!activeSyncs.contains(userId)) {
             syncRemoteToLocal(userId)
         }
         
         // Expose local data as the single source of truth for the UI
-        return localDao.getAllSlots().map { entities ->
+        return localDao.getAllSlots(userId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
     private fun syncRemoteToLocal(userId: String) {
-        isSyncing = true
+        activeSyncs.add(userId)
         firestore.collection("users").document(userId)
             .collection("timetable")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    isSyncing = false
+                    activeSyncs.remove(userId)
                     return@addSnapshotListener
                 }
                 
@@ -50,7 +49,7 @@ class TimetableRepositoryImpl @Inject constructor(
 
                 if (remoteSlots.isNotEmpty()) {
                     repositoryScope.launch {
-                        localDao.insertAll(remoteSlots.map { it.toEntity() })
+                        localDao.insertAll(remoteSlots.map { it.toEntity(userId) })
                     }
                 }
             }
@@ -59,7 +58,7 @@ class TimetableRepositoryImpl @Inject constructor(
     override suspend fun updateSlot(userId: String, slot: TimetableSlot): Result<Unit> {
         return try {
             // Update local first for instant UI response
-            val entity = slot.toEntity()
+            val entity = slot.toEntity(userId)
             localDao.insertSlot(entity)
             
             // Sync to cloud
@@ -70,8 +69,6 @@ class TimetableRepositoryImpl @Inject constructor(
                 
             Result.success(Unit)
         } catch (e: Exception) {
-            // In a production app, you might want to mark the entity as "sync_pending" 
-            // if cloud update fails
             Result.failure(e)
         }
     }
@@ -79,7 +76,7 @@ class TimetableRepositoryImpl @Inject constructor(
     override suspend fun saveTimetable(userId: String, timetable: List<TimetableSlot>): Result<Unit> {
         return try {
             // 1. Local Batch Update
-            localDao.insertAll(timetable.map { it.toEntity() })
+            localDao.insertAll(timetable.map { it.toEntity(userId) })
 
             // 2. Cloud Batch Update
             val batch = firestore.batch()
@@ -98,7 +95,8 @@ class TimetableRepositoryImpl @Inject constructor(
     }
 
     // Mappers
-    private fun TimetableSlot.toEntity() = TimetableEntity(
+    private fun TimetableSlot.toEntity(userId: String) = TimetableEntity(
+        userId = userId,
         day = day,
         slotNumber = slotNumber,
         startTime = startTime,

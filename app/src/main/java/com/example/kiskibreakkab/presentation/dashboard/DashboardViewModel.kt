@@ -38,10 +38,7 @@ class DashboardViewModel @Inject constructor(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val userData = authRepository.currentUser
-        .flatMapLatest { user ->
-            if (user != null) dashboardRepository.getUserData(user.userId)
-            else flowOf(null)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val friendsFreeNow = combine(userData, _currentDay, _currentSlot) { user, day, slot ->

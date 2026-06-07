@@ -4,9 +4,10 @@ import androidx.room.Entity
 
 @Entity(
     tableName = "timetable",
-    primaryKeys = ["day", "slotNumber"]
+    primaryKeys = ["userId", "day", "slotNumber"]
 )
 data class TimetableEntity(
+    val userId: String,
     val day: String,
     val slotNumber: Int,
     val startTime: String,
