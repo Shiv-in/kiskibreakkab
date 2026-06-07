@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "652741055901",
+    "project_id": "kiskibreakkab-2026",
+    "storage_bucket": "kiskibreakkab-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:652741055901:android:fc21cc17c89668e3ed0b74",
+        "android_client_info": {
+          "package_name": "com.example.kiskibreakkab"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwL_eZqX55pi0rTowWKifVhe2h0GmXy3c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
