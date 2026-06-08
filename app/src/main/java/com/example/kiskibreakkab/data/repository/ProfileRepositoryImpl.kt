@@ -60,7 +60,8 @@ class ProfileRepositoryImpl @Inject constructor(
         name = name,
         email = email,
         section = section,
-        labGroup = labGroup
+        labGroup = labGroup,
+        temporaryLocation = temporaryLocation
     )
 
     private fun UserEntity.toDomain() = User(
@@ -69,6 +70,7 @@ class ProfileRepositoryImpl @Inject constructor(
         name = name,
         email = email,
         section = section,
-        labGroup = labGroup
+        labGroup = labGroup,
+        temporaryLocation = temporaryLocation
     )
 }

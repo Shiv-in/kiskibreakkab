@@ -74,9 +74,6 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // PDF Parsing
-    implementation(libs.pdfbox.android)
-
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

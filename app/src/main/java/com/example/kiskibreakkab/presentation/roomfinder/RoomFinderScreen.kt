@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,7 +26,7 @@ import com.example.kiskibreakkab.core.theme.*
 import com.example.kiskibreakkab.core.utils.TimeUtils
 import com.example.kiskibreakkab.domain.model.Room
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RoomFinderScreen(
     onNavigateBack: () -> Unit,
@@ -35,10 +36,12 @@ fun RoomFinderScreen(
     val selectedSlot by viewModel.selectedSlot.collectAsState()
     val selectedBlock by viewModel.selectedBlock.collectAsState()
     val rooms by viewModel.rooms.collectAsState()
+    val availableBlocks by viewModel.availableBlocks.collectAsState()
+    val userClaimedRoomId by viewModel.userClaimedRoomId.collectAsState()
 
     val days = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT")
     val slotNumbers = 1..8
-    val blocks = listOf("A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "B6", "M1", "M2")
+    val blocks = availableBlocks
 
     Scaffold(
         topBar = {
@@ -77,6 +80,47 @@ fun RoomFinderScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                // User's Current Claim (Red Banner like website)
+                userClaimedRoomId?.let { roomId ->
+                    val claimedRoom = rooms.find { it.roomId == roomId }
+                    if (claimedRoom != null) {
+                        BrutalistCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = KiskiRed
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = KiskiWhite, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "YOU'RE IN: ${claimedRoom.roomName}",
+                                        color = KiskiWhite,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .background(KiskiWhite)
+                                        .border(2.dp, MaterialTheme.colorScheme.onBackground)
+                                        .clickable { viewModel.releaseRoom() }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Close, contentDescription = null, tint = KiskiRed, modifier = Modifier.size(16.dp))
+                                        Text("RELEASE", color = KiskiRed, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Selectors
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(
@@ -126,14 +170,36 @@ fun RoomFinderScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("AVAILABLE ROOMS (${rooms.count { it.isAvailable }})", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("REFRESH", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.clickable {  })
+                        Text(
+                            text = "REFRESH", 
+                            fontSize = 10.sp, 
+                            fontWeight = FontWeight.Black, 
+                            color = KiskiRed, 
+                            modifier = Modifier
+                                .border(1.dp, KiskiRed)
+                                .clickable { viewModel.refreshRooms() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     if (rooms.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("NO DATA FOR THIS SLOT", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                                        .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(16.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.SearchOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("NO ROOMS AVAILABLE", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Try changing filters or refreshing.", fontSize = 10.sp, color = Color.Gray)
+                            }
                         }
                     } else {
                         LazyColumn(
@@ -143,8 +209,11 @@ fun RoomFinderScreen(
                             items(rooms) { room ->
                                 RoomItem(
                                     room = room,
-                                    onClaim = { viewModel.claimRoom(room.roomId) },
-                                    onOccupy = { viewModel.occupyRoom(room.roomName) }
+                                    onClaim = { 
+                                        if (room.isAvailable) {
+                                            viewModel.claimRoom(room.roomId) 
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -214,40 +283,66 @@ fun BrutalistDropdown(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun RoomItem(room: Room, onClaim: () -> Unit, onOccupy: () -> Unit) {
+fun RoomItem(room: Room, onClaim: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .border(2.dp, MaterialTheme.colorScheme.onBackground)
+            .background(if (room.isAvailable) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            .clickable(enabled = room.isAvailable, onClick = onClaim)
             .padding(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = if (room.isAvailable) KiskiGreen else Color.Gray,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(room.roomName.uppercase(), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = if (room.isAvailable) KiskiGreen else Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(room.roomName.uppercase(), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                }
+                
+                Badge(
+                    text = if (room.isAvailable) "FREE" else "OCCUPIED",
+                    color = if (room.isAvailable) KiskiGreen else Color.Gray
+                )
             }
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(
-                    modifier = Modifier
-                        .background(if (room.isAvailable) KiskiGreen.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.onBackground)
-                        .clickable(enabled = room.isAvailable, onClick = onOccupy)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+
+            if (room.occupantNames.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 1.dp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.People, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("CURRENTLY HERE (${room.occupantNames.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = "I'M HERE",
-                        color = if (room.isAvailable) KiskiGreen else Color.Gray,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 10.sp
-                    )
+                    room.occupantNames.take(5).forEach { name ->
+                        Box(
+                            modifier = Modifier
+                                .border(1.dp, MaterialTheme.colorScheme.onBackground)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(name, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    if (room.occupantNames.size > 5) {
+                        Text("+${room.occupantNames.size - 5} MORE", fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                    }
                 }
             }
         }

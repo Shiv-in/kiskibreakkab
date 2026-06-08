@@ -1,10 +1,8 @@
 package com.example.kiskibreakkab.presentation.profile
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,20 +32,10 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isAdmin by viewModel.isAdmin.collectAsState()
-    val context = LocalContext.current
-    
-    val pdfPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.importRoomsFromPdf(it, context)
-        }
-    }
     
     var name by remember { mutableStateOf("") }
     var section by remember { mutableStateOf("") }
     var labGroup by remember { mutableStateOf("") }
-    var roomsInput by remember { mutableStateOf("") }
 
     LaunchedEffect(uiState.user) {
         uiState.user?.let {
@@ -144,6 +133,9 @@ fun ProfileScreen(
 
                 // Admin Override Section
                 if (isAdmin) {
+                    var selectedBlockForJson by remember { mutableStateOf("") }
+                    var jsonInput by remember { mutableStateOf("") }
+
                     BrutalistCard(
                         modifier = Modifier.fillMaxWidth(),
                         backgroundColor = MaterialTheme.colorScheme.surface
@@ -151,14 +143,21 @@ fun ProfileScreen(
                         Text("COMMAND OVERRIDE (ADMIN)", fontWeight = FontWeight.Black, fontSize = 14.sp, color = KiskiRed)
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        Text("BULK ROOM IMPORT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Format: RoomName, Block, Department", fontSize = 8.sp, color = Color.Gray)
+                        Text("1. TARGET BUILDING CODE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        BrutalistTextField(
+                            value = selectedBlockForJson,
+                            onValueChange = { selectedBlockForJson = it.uppercase() },
+                            placeholder = "e.g. B3, M, B6"
+                        )
                         
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text("2. JSON TIMETABLE DATA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         OutlinedTextField(
-                            value = roomsInput,
-                            onValueChange = { roomsInput = it },
+                            value = jsonInput,
+                            onValueChange = { jsonInput = it },
                             modifier = Modifier.fillMaxWidth().height(150.dp),
-                            placeholder = { Text("610, B6, CSE\n101, B1, ME", color = Color.Gray, fontSize = 12.sp) },
+                            placeholder = { Text("Paste JSON map here...", color = Color.Gray, fontSize = 12.sp) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.background,
                                 focusedContainerColor = MaterialTheme.colorScheme.background,
@@ -170,10 +169,12 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         BrutalistButton(
-                            text = "DEPLOY UNITS",
+                            text = "INJECT DATA",
                             onClick = { 
-                                viewModel.importRooms(roomsInput)
-                                roomsInput = ""
+                                if (selectedBlockForJson.isNotBlank() && jsonInput.isNotBlank()) {
+                                    viewModel.importRoomsFromJson(selectedBlockForJson, jsonInput)
+                                    jsonInput = ""
+                                }
                             },
                             containerColor = KiskiRed,
                             contentColor = KiskiWhite,
@@ -182,15 +183,39 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Text("OR SELECT DOCUMENT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        var showPurgeDialog by remember { mutableStateOf(false) }
 
-                        BrutalistButton(
-                            text = "IMPORT FROM PDF",
-                            onClick = { pdfPickerLauncher.launch("application/pdf") },
-                            containerColor = MaterialTheme.colorScheme.onSurface,
-                            contentColor = MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        TextButton(
+                            onClick = { showPurgeDialog = true },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("WIPE ALL CAMPUS DATA", color = KiskiRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        if (showPurgeDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showPurgeDialog = false },
+                                title = { Text("CONFIRM SYSTEM WIPE", fontWeight = FontWeight.Black) },
+                                text = { Text("This will delete every building and room currently in the system database. This cannot be undone.") },
+                                confirmButton = {
+                                    TextButton(onClick = { 
+                                        viewModel.clearAllRooms()
+                                        showPurgeDialog = false
+                                    }) {
+                                        Text("WIPE SYSTEM", color = KiskiRed, fontWeight = FontWeight.Bold)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showPurgeDialog = false }) {
+                                        Text("CANCEL")
+                                    }
+                                },
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                textContentColor = MaterialTheme.colorScheme.onSurface,
+                                shape = RectangleShape
+                            )
+                        }
                     }
                 }
 

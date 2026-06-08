@@ -35,6 +35,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.kiskibreakkab.presentation.auth.AuthScreen
 import com.example.kiskibreakkab.presentation.auth.LandingScreen
+import com.example.kiskibreakkab.presentation.auth.SplashScreen
 import com.example.kiskibreakkab.presentation.dashboard.DashboardScreen
 import com.example.kiskibreakkab.presentation.timetable.TimetableScreen
 import com.example.kiskibreakkab.presentation.friends.FriendScreen
@@ -71,31 +72,21 @@ class MainActivity : ComponentActivity() {
             val mainViewModel: MainViewModel = hiltViewModel()
             val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
             val user by mainViewModel.currentUser.collectAsState()
+            val isAuthReady by mainViewModel.isAuthReady.collectAsState()
 
             KiskiBreakKabTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
-                // Auto-redirect if logged in and on Landing or Auth screens
-                LaunchedEffect(user) {
-                    if (user != null) {
-                        if (currentRoute == Screen.Landing.route || currentRoute == Screen.Auth.route) {
-                            navController.navigate(Screen.Dashboard.route) {
-                                popUpTo(Screen.Landing.route) { inclusive = true }
-                            }
-                        }
-                    }
-                }
-
-                val showTopBar = currentRoute != Screen.Landing.route && currentRoute != Screen.Auth.route
+                val showTopBar = currentRoute != Screen.Landing.route && currentRoute != Screen.Auth.route && currentRoute != Screen.Splash.route
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
                         if (showTopBar) {
                             KiskiTopBar(
-                                userName = user?.name ?: "S",
+                                userName = user?.name ?: "P",
                                 isDarkTheme = isDarkTheme,
                                 onToggleTheme = { mainViewModel.toggleTheme() },
                                 onProfileClick = { navController.navigate(Screen.Profile.route) }
@@ -105,9 +96,25 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.Landing.route,
+                        startDestination = Screen.Splash.route,
                         modifier = Modifier.padding(innerPadding)
                     ) {
+                        composable(Screen.Splash.route) {
+                            SplashScreen(
+                                isReady = isAuthReady,
+                                currentUser = user,
+                                onNavigateToDashboard = {
+                                    navController.navigate(Screen.Dashboard.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                },
+                                onNavigateToLanding = {
+                                    navController.navigate(Screen.Landing.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable(Screen.Landing.route) {
                             LandingScreen(
                                 onGetStarted = { navController.navigate(Screen.Auth.route) },

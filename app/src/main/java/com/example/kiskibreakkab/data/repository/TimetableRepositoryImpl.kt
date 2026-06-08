@@ -49,7 +49,22 @@ class TimetableRepositoryImpl @Inject constructor(
 
                 if (remoteSlots.isNotEmpty()) {
                     repositoryScope.launch {
-                        localDao.insertAll(remoteSlots.map { it.toEntity(userId) })
+                        // For each remote slot, only update local if remote is NEWER
+                        // Fetch all local slots first for comparison
+                        val localEntities = localDao.getAllSlotsSync(userId)
+                        
+                        val entitiesToInsert = remoteSlots.mapNotNull { remote ->
+                            val local = localEntities.find { it.day == remote.day && it.slotNumber == remote.slotNumber }
+                            if (local == null || remote.lastUpdated > local.lastUpdated) {
+                                remote.toEntity(userId)
+                            } else {
+                                null
+                            }
+                        }
+                        
+                        if (entitiesToInsert.isNotEmpty()) {
+                            localDao.insertAll(entitiesToInsert)
+                        }
                     }
                 }
             }
@@ -57,15 +72,23 @@ class TimetableRepositoryImpl @Inject constructor(
 
     override suspend fun updateSlot(userId: String, slot: TimetableSlot): Result<Unit> {
         return try {
-            // Update local first for instant UI response
-            val entity = slot.toEntity(userId)
-            localDao.insertSlot(entity)
+            val now = System.currentTimeMillis()
+            val updatedSlot = slot.copy(lastUpdated = now)
             
-            // Sync to cloud
-            val slotId = "${slot.day}_${slot.slotNumber}"
-            firestore.collection("users").document(userId)
-                .collection("timetable").document(slotId)
-                .set(slot).await()
+            // 1. Update local first (Instant UI response)
+            localDao.insertSlot(updatedSlot.toEntity(userId))
+            
+            // 2. Push to cloud
+            repositoryScope.launch {
+                try {
+                    val slotId = "${slot.day}_${slot.slotNumber}"
+                    firestore.collection("users").document(userId)
+                        .collection("timetable").document(slotId)
+                        .set(updatedSlot).await()
+                } catch (e: Exception) {
+                    // Fail silently, will retry or sync later
+                }
+            }
                 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -75,19 +98,26 @@ class TimetableRepositoryImpl @Inject constructor(
 
     override suspend fun saveTimetable(userId: String, timetable: List<TimetableSlot>): Result<Unit> {
         return try {
+            val now = System.currentTimeMillis()
+            val updatedTimetable = timetable.map { it.copy(lastUpdated = now) }
+            
             // 1. Local Batch Update
-            localDao.insertAll(timetable.map { it.toEntity(userId) })
+            localDao.insertAll(updatedTimetable.map { it.toEntity(userId) })
 
             // 2. Cloud Batch Update
-            val batch = firestore.batch()
-            val userRef = firestore.collection("users").document(userId).collection("timetable")
-            
-            timetable.forEach { slot ->
-                val slotId = "${slot.day}_${slot.slotNumber}"
-                batch.set(userRef.document(slotId), slot)
+            repositoryScope.launch {
+                try {
+                    val batch = firestore.batch()
+                    val userRef = firestore.collection("users").document(userId).collection("timetable")
+                    
+                    updatedTimetable.forEach { slot ->
+                        val slotId = "${slot.day}_${slot.slotNumber}"
+                        batch.set(userRef.document(slotId), slot)
+                    }
+                    batch.commit().await()
+                } catch (e: Exception) {}
             }
             
-            batch.commit().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -102,7 +132,8 @@ class TimetableRepositoryImpl @Inject constructor(
         startTime = startTime,
         endTime = endTime,
         isFree = isFree,
-        lastUpdated = System.currentTimeMillis()
+        location = location,
+        lastUpdated = lastUpdated
     )
 
     private fun TimetableEntity.toDomain() = TimetableSlot(
@@ -110,6 +141,8 @@ class TimetableRepositoryImpl @Inject constructor(
         slotNumber = slotNumber,
         startTime = startTime,
         endTime = endTime,
-        isFree = isFree
+        isFree = isFree,
+        location = location,
+        lastUpdated = lastUpdated
     )
 }

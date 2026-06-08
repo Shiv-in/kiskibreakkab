@@ -9,6 +9,9 @@ interface TimetableDao {
     @Query("SELECT * FROM timetable WHERE userId = :userId ORDER BY day, slotNumber ASC")
     fun getAllSlots(userId: String): Flow<List<TimetableEntity>>
 
+    @Query("SELECT * FROM timetable WHERE userId = :userId")
+    suspend fun getAllSlotsSync(userId: String): List<TimetableEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSlot(slot: TimetableEntity)
 

@@ -13,5 +13,6 @@ data class TimetableEntity(
     val startTime: String,
     val endTime: String,
     val isFree: Boolean,
+    val location: String? = null,
     val lastUpdated: Long = System.currentTimeMillis()
 )

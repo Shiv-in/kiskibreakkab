@@ -430,7 +430,7 @@ fun Footer() {
         Spacer(modifier = Modifier.height(48.dp))
         
         Text(
-            "© 2026 STUDENT PROJECT • V1.0.0",
+            "© 2026 STUDENT PROJECT • V1.0.1",
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,

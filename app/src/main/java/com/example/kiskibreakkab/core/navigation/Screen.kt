@@ -1,6 +1,7 @@
 package com.example.kiskibreakkab.core.navigation
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Landing : Screen("landing")
     object Auth : Screen("auth")
     object Dashboard : Screen("dashboard")

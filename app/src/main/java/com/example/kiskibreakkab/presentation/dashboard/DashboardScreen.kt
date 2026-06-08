@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.kiskibreakkab.core.components.*
 import com.example.kiskibreakkab.core.theme.*
+import com.example.kiskibreakkab.core.utils.TimeUtils
 import com.example.kiskibreakkab.domain.model.Room
 import com.example.kiskibreakkab.domain.model.TimetableSlot
 import com.example.kiskibreakkab.domain.model.User
@@ -45,8 +47,12 @@ fun DashboardScreen(
     val currentSlot by viewModel.currentSlot.collectAsState()
     val friendsFree by viewModel.friendsFreeNow.collectAsState()
     val roomsFree by viewModel.freeRooms.collectAsState()
-    val squadCount by viewModel.squadCount.collectAsState()
-    val friendCount by viewModel.friendCount.collectAsState()
+    val squadCount by viewModel.squadCount.collectAsState(initial = 0)
+    val friendCount by viewModel.friendCount.collectAsState(initial = 0)
+
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var selectedRoom by remember { mutableStateOf<RoomWithDuration?>(null) }
+    var selectedDuration by remember { mutableStateOf(1) }
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -63,9 +69,51 @@ fun DashboardScreen(
                 WelcomeBanner(userName = userData?.name ?: "USER")
             }
 
+            // 1.5 Current Location Banner (If set)
+            userData?.temporaryLocation?.let { loc ->
+                item {
+                    BrutalistCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        backgroundColor = KiskiRed
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Place, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "CURRENTLY AT: ${loc.room}",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Text(
+                                "CLEAR",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.clickable { viewModel.clearLocation() }
+                            )
+                        }
+                    }
+                }
+            }
+
             // 2. Free Rooms Widget
             item {
-                FreeRoomsWidget(roomsFree, currentSlot)
+                FreeRoomsWidget(
+                    rooms = roomsFree, 
+                    slot = currentSlot,
+                    onRoomClick = { room ->
+                        selectedRoom = room
+                        selectedDuration = 1
+                        showConfirmDialog = true
+                    }
+                )
             }
 
             // 3. Friends Free Now
@@ -101,6 +149,110 @@ fun DashboardScreen(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
+
+    if (showConfirmDialog && selectedRoom != null) {
+        ConfirmLocationDialog(
+            room = selectedRoom!!,
+            userName = userData?.name ?: "Student",
+            currentSlot = currentSlot?.slotNumber ?: 1,
+            selectedDuration = selectedDuration,
+            onDurationChange = { selectedDuration = it },
+            onConfirm = {
+                viewModel.markSittingHere(selectedRoom!!.room.roomName, selectedDuration)
+                showConfirmDialog = false
+            },
+            onDismiss = { showConfirmDialog = false }
+        )
+    }
+}
+
+@Composable
+fun ConfirmLocationDialog(
+    room: RoomWithDuration,
+    userName: String,
+    currentSlot: Int,
+    selectedDuration: Int,
+    onDurationChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            BrutalistButton(
+                text = "I'M SITTING HERE",
+                onClick = onConfirm,
+                containerColor = KiskiRed,
+                contentColor = Color.White,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Place, contentDescription = null, tint = KiskiRed)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("CONFIRM LOCATION", fontWeight = FontWeight.Black, fontSize = 20.sp)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                BrutalistCard(backgroundColor = MaterialTheme.colorScheme.background) {
+                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(room.room.roomName, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                        Text(room.room.buildingName.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    }
+                }
+
+                Column {
+                    Text("HOW MANY SLOTS WILL YOU STAY?", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        (1..room.duration).forEach { num ->
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(if (selectedDuration == num) KiskiRed else MaterialTheme.colorScheme.surface)
+                                    .border(2.dp, MaterialTheme.colorScheme.onBackground)
+                                    .clickable { onDurationChange(num) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    num.toString(),
+                                    fontWeight = FontWeight.Black,
+                                    color = if (selectedDuration == num) Color.White else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                BrutalistCard(backgroundColor = MaterialTheme.colorScheme.onBackground) {
+                    Column {
+                        Text("ACTIVE IN SLOTS:", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.background.copy(alpha = 0.6f))
+                        (0 until selectedDuration).forEach { i ->
+                            val slotNum = currentSlot + i
+                            val time = TimeUtils.slots.find { it.slotNumber == slotNum }?.startTime ?: ""
+                            Text(
+                                "Slot $slotNum • $time",
+                                color = MaterialTheme.colorScheme.background,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RectangleShape
+    )
 }
 
 @Composable
@@ -168,7 +320,11 @@ fun WelcomeBanner(userName: String) {
 }
 
 @Composable
-fun FreeRoomsWidget(rooms: List<Room>, slot: TimetableSlot?) {
+fun FreeRoomsWidget(
+    rooms: List<RoomWithDuration>, 
+    slot: TimetableSlot?,
+    onRoomClick: (RoomWithDuration) -> Unit
+) {
     val slotText = if (slot != null) {
         "SLOT ${slot.slotNumber} • ${slot.startTime} - ${slot.endTime}"
     } else {
@@ -193,32 +349,41 @@ fun FreeRoomsWidget(rooms: List<Room>, slot: TimetableSlot?) {
         }
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        
+        // Show ALL rooms in a scrollable horizontal row or vertical list
+        // Since the user wants to see "each and every" room
+        LazyRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), 
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             if (rooms.isEmpty()) {
-               Text("NO ROOMS DISCOVERED", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+               item {
+                   Text("NO ROOMS DISCOVERED", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(8.dp))
+               }
             } else {
-                rooms.take(2).forEach { room ->
-                    RoomChip(room)
+                items(rooms) { roomWithDuration ->
+                    RoomChip(roomWithDuration, onClick = { onRoomClick(roomWithDuration) })
                 }
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text("${rooms.size} ROOMS EMPTY", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray)
+        Text("${rooms.size} TOTAL ROOMS AVAILABLE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
     }
 }
 
 @Composable
-fun RowScope.RoomChip(room: Room) {
+fun RoomChip(roomWithDuration: RoomWithDuration, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .weight(1f)
-            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(12.dp))
-            .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-            .padding(12.dp),
+            .background(MaterialTheme.colorScheme.onBackground)
+            .border(2.dp, MaterialTheme.colorScheme.onBackground)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(room.roomName, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Text(roomWithDuration.room.roomName, color = MaterialTheme.colorScheme.background, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Text("${roomWithDuration.duration} SLOTS", color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -275,14 +440,30 @@ fun FriendFreeRow(friend: User) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
-                    .background(KiskiBlue, RoundedCornerShape(8.dp)),
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.onBackground)
+                    .border(2.dp, MaterialTheme.colorScheme.onBackground),
                 contentAlignment = Alignment.Center
             ) {
-                Text(friend.name.take(1).uppercase(), color = KiskiWhite, fontWeight = FontWeight.Bold)
+                Text(
+                    friend.name.take(1).uppercase(), 
+                    color = MaterialTheme.colorScheme.background, 
+                    fontWeight = FontWeight.Black
+                )
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Text(friend.name.uppercase(), fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Column {
+                Text(friend.name.uppercase(), fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(friend.uid, fontSize = 8.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, color = Color.Gray)
+                    friend.temporaryLocation?.let { loc ->
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("•", fontSize = 8.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(loc.room, fontSize = 10.sp, fontWeight = FontWeight.Black, color = KiskiRed)
+                    }
+                }
+            }
             Spacer(modifier = Modifier.weight(1f))
             Badge("FREE", KiskiGreen)
         }
@@ -310,6 +491,8 @@ fun RoomFinderWidget(onSearch: () -> Unit) {
 
 @Composable
 fun StatusMonitorWidget(day: String, slot: String, time: String) {
+    val isWeekend = TimeUtils.isWeekend()
+    
     BrutalistHeaderCard(
         title = "STATUS MONITOR",
         trailingHeaderContent = {
@@ -324,9 +507,9 @@ fun StatusMonitorWidget(day: String, slot: String, time: String) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         BrutalistButton(
-            text = "WEEKEND", 
+            text = if (isWeekend) "WEEKEND MODE" else "ACADEMIC CYCLE ACTIVE", 
             onClick = {}, 
-            containerColor = KiskiPurple,
+            containerColor = if (isWeekend) KiskiPurple else KiskiGreen,
             contentColor = KiskiWhite,
             shadowColor = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxWidth()

@@ -40,13 +40,18 @@ class AuthRepositoryImpl @Inject constructor(
                     prefs.edit().putLong("last_login_ts", System.currentTimeMillis()).apply()
                 } else if (System.currentTimeMillis() - lastLogin > oneWeekMillis) {
                     auth.signOut()
+                    prefs.edit().remove("last_login_ts").apply() // Clear on expire
                     trySend(null)
                     return@AuthStateListener
                 }
 
                 firestore.collection("users").document(firebaseUser.uid)
                     .addSnapshotListener { snapshot, error ->
-                        if (error != null) return@addSnapshotListener
+                        if (error != null) {
+                            trySend(null)
+                            return@addSnapshotListener
+                        }
+
                         val user = snapshot?.toObject(User::class.java)
                         if (user != null) {
                             repositoryScope.launch {
@@ -69,7 +74,8 @@ class AuthRepositoryImpl @Inject constructor(
         name = name,
         email = email,
         section = section,
-        labGroup = labGroup
+        labGroup = labGroup,
+        temporaryLocation = temporaryLocation
     )
 
     override suspend fun login(uid: String, password: String): Result<Unit> {

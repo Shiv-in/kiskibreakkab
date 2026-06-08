@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.kiskibreakkab.core.components.*
 import com.example.kiskibreakkab.core.theme.*
+import com.example.kiskibreakkab.core.utils.TimeUtils
 import com.example.kiskibreakkab.presentation.timetable.SlotCell
 import com.example.kiskibreakkab.presentation.timetable.TableCell
 
@@ -29,7 +30,7 @@ fun FriendScheduleScreen(
     viewModel: FriendScheduleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val days = listOf("MON", "TUE", "WED", "THU", "FRI")
+    val days = TimeUtils.WEEK_DAYS
     val slotNumbers = 1..8
 
     Scaffold(
@@ -93,7 +94,9 @@ fun FriendScheduleScreen(
                                             val slot = uiState.timetable.find { it.day == day && it.slotNumber == slotNum }
                                             SlotCell(
                                                 isFree = slot?.isFree ?: true,
-                                                onClick = { /* Read only */ }
+                                                location = slot?.location,
+                                                onClick = { /* Read only */ },
+                                                onLongClick = { /* Read only */ }
                                             )
                                         }
                                     }
