@@ -50,7 +50,6 @@ fun KiskiBreakKabTheme(
         SideEffect {
             val activity = view.context.findActivity()
             activity?.window?.let { window ->
-                window.statusBarColor = colorScheme.background.toArgb()
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             }
         }

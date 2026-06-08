@@ -3,7 +3,6 @@ package com.example.kiskibreakkab.presentation.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -230,26 +229,62 @@ fun FriendsFreeWidget(friends: List<User>) {
         title = "FRIENDS FREE NOW",
         icon = Icons.Default.People
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
-                        .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.NotInterested, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+        if (friends.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(friends) { friend ->
+                    FriendFreeRow(friend)
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("NO ONE IS FREE", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Text("Everyone is busy attending classes.", color = Color.Gray, fontSize = 12.sp)
             }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                            .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.NotInterested, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("NO ONE IS FREE", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Text("Everyone is busy attending classes.", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FriendFreeRow(friend: User) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(2.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+            .padding(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(KiskiBlue, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(friend.name.take(1).uppercase(), color = KiskiWhite, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(friend.name.uppercase(), fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Spacer(modifier = Modifier.weight(1f))
+            Badge("FREE", KiskiGreen)
         }
     }
 }

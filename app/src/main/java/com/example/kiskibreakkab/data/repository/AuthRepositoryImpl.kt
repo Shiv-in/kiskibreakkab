@@ -34,7 +34,11 @@ class AuthRepositoryImpl @Inject constructor(
                 // Check session age
                 val lastLogin = prefs.getLong("last_login_ts", 0)
                 val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
-                if (System.currentTimeMillis() - lastLogin > oneWeekMillis && lastLogin != 0L) {
+                
+                if (lastLogin == 0L) {
+                    // Initialize last_login_ts for users who were already logged in
+                    prefs.edit().putLong("last_login_ts", System.currentTimeMillis()).apply()
+                } else if (System.currentTimeMillis() - lastLogin > oneWeekMillis) {
                     auth.signOut()
                     trySend(null)
                     return@AuthStateListener
@@ -84,6 +88,7 @@ class AuthRepositoryImpl @Inject constructor(
             }
             
             val authResult = auth.signInWithEmailAndPassword(email, password).await()
+            prefs.edit().putLong("last_login_ts", System.currentTimeMillis()).apply()
             Result.success(Unit)
         } catch (e: Exception) {
             val message = when(e) {

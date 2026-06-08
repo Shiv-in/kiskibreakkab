@@ -6,6 +6,8 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 object TimeUtils {
+    val WEEK_DAYS = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT")
+
     val slots = listOf(
         TimetableSlot("", 1, "09:30", "10:20"),
         TimetableSlot("", 2, "10:20", "11:10"),

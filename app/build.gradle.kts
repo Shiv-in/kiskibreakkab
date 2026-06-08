@@ -70,6 +70,12 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
+    
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
+    // PDF Parsing
+    implementation(libs.pdfbox.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

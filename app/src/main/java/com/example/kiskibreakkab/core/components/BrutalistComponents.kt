@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -156,19 +155,24 @@ fun GridBackground(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .drawBehind {
                 val gridSize = 20.dp.toPx()
-                for (x in 0..(size.width / gridSize).toInt()) {
+                val xLines = (size.width / gridSize).toInt()
+                val yLines = (size.height / gridSize).toInt()
+
+                for (x in 0..xLines) {
+                    val xPos = x * gridSize
                     drawLine(
                         gridColor,
-                        Offset(x * gridSize, 0f),
-                        Offset(x * gridSize, size.height),
+                        Offset(xPos, 0f),
+                        Offset(xPos, size.height),
                         strokeWidth = 1f
                     )
                 }
-                for (y in 0..(size.height / gridSize).toInt()) {
+                for (y in 0..yLines) {
+                    val yPos = y * gridSize
                     drawLine(
                         gridColor,
-                        Offset(0f, y * gridSize),
-                        Offset(size.width, y * gridSize),
+                        Offset(0f, yPos),
+                        Offset(size.width, yPos),
                         strokeWidth = 1f
                     )
                 }

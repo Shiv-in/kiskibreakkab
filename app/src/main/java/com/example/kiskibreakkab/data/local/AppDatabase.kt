@@ -9,7 +9,8 @@ import com.example.kiskibreakkab.data.local.entity.UserEntity
 
 @Database(
     entities = [TimetableEntity::class, UserEntity::class], 
-    version = 3
+    version = 4,
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun timetableDao(): TimetableDao
