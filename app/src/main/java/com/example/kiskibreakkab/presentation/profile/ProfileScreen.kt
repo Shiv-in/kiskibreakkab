@@ -1,5 +1,8 @@
 package com.example.kiskibreakkab.presentation.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +33,15 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isAdmin by viewModel.isAdmin.collectAsState()
+    val context = LocalContext.current
+    
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.importRoomsFromPdf(it, context)
+        }
+    }
     
     var name by remember { mutableStateOf("") }
     var section by remember { mutableStateOf("") }
@@ -166,10 +179,32 @@ fun ProfileScreen(
                             contentColor = KiskiWhite,
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text("OR SELECT DOCUMENT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+
+                        BrutalistButton(
+                            text = "IMPORT FROM PDF",
+                            onClick = { pdfPickerLauncher.launch("application/pdf") },
+                            containerColor = MaterialTheme.colorScheme.onSurface,
+                            contentColor = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 
                 // Success/Error Messages
+                uiState.importProgress?.let {
+                    BrutalistCard(modifier = Modifier.fillMaxWidth(), backgroundColor = KiskiGreen.copy(alpha = 0.1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = KiskiGreen)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(it, color = KiskiGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                }
+
                 uiState.successMessage?.let {
                     Text(it, color = KiskiGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }

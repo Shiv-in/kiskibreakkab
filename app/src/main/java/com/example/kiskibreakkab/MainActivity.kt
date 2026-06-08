@@ -77,6 +77,17 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
+                // Auto-redirect if logged in and on Landing or Auth screens
+                LaunchedEffect(user) {
+                    if (user != null) {
+                        if (currentRoute == Screen.Landing.route || currentRoute == Screen.Auth.route) {
+                            navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Landing.route) { inclusive = true }
+                            }
+                        }
+                    }
+                }
+
                 val showTopBar = currentRoute != Screen.Landing.route && currentRoute != Screen.Auth.route
 
                 Scaffold(

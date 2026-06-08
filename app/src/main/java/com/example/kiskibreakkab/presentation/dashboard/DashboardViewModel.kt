@@ -29,13 +29,6 @@ class DashboardViewModel @Inject constructor(
     private val _currentSlot = MutableStateFlow(TimeUtils.getCurrentSlot())
     val currentSlot = _currentSlot.asStateFlow()
 
-    private val _isDarkTheme = MutableStateFlow(true)
-    val isDarkTheme = _isDarkTheme.asStateFlow()
-
-    fun toggleTheme() {
-        _isDarkTheme.value = !_isDarkTheme.value
-    }
-
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val userData = authRepository.currentUser
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

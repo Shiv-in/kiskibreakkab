@@ -175,7 +175,7 @@ fun BrutalistDropdown(
         ) {
             Box(
                 modifier = Modifier
-                    .menuAnchor()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surface)
                     .border(2.dp, MaterialTheme.colorScheme.onBackground)

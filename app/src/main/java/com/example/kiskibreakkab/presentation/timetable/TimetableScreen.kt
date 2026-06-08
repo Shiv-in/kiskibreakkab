@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.kiskibreakkab.core.components.*
 import com.example.kiskibreakkab.core.theme.*
+
+import com.example.kiskibreakkab.core.utils.TimeUtils
 import com.example.kiskibreakkab.domain.model.TimetableSlot
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +35,8 @@ fun TimetableScreen(
 ) {
     val timetable by viewModel.timetable.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
-    val days = listOf("MON", "TUE", "WED", "THU", "FRI")
+    val userUid by viewModel.userUid.collectAsState()
+    val days = listOf("MON", "TUE", "WED", "THU", "FRI","SAT")
     val slotNumbers = 1..8
 
     Scaffold(
@@ -52,7 +55,7 @@ fun TimetableScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 modifier = Modifier.drawBehind {
@@ -107,17 +110,7 @@ fun TimetableScreen(
                             Row(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
                                 TableCell(text = "DAY", isHeader = true)
                                 slotNumbers.forEach { num ->
-                                    val time = when(num) {
-                                        1 -> "09:30"
-                                        2 -> "10:20"
-                                        3 -> "11:20"
-                                        4 -> "12:10"
-                                        5 -> "13:00"
-                                        6 -> "13:55"
-                                        7 -> "14:45"
-                                        8 -> "15:35"
-                                        else -> ""
-                                    }
+                                    val time = TimeUtils.slots.find { it.slotNumber == num }?.startTime ?: ""
                                     TableCell(text = "S$num\n$time", isHeader = true)
                                 }
                             }
@@ -156,7 +149,7 @@ fun TimetableScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("SYSTEM ID: 23ICS10005", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    Text("SYSTEM ID: $userUid", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                     Text("SECURE CONNECTION ESTABLISHED", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                 }
             }
