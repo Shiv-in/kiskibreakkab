@@ -31,6 +31,7 @@ import com.example.kiskibreakkab.core.utils.TimeUtils
 import com.example.kiskibreakkab.domain.model.Room
 import com.example.kiskibreakkab.domain.model.TimetableSlot
 import com.example.kiskibreakkab.domain.model.User
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -494,11 +495,7 @@ fun StatusMonitorWidget(day: String, slot: String, time: String) {
     val isWeekend = TimeUtils.isWeekend()
     
     BrutalistHeaderCard(
-        title = "STATUS MONITOR",
-        trailingHeaderContent = {
-            // Updated to be black on white for high contrast as requested
-            Badge("LIVE: $time", KiskiWhite, textColor = KiskiBlack)
-        }
+        title = "STATUS MONITOR"
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatusBox("CURRENT DAY", day, Modifier.weight(1f))
@@ -507,7 +504,9 @@ fun StatusMonitorWidget(day: String, slot: String, time: String) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         BrutalistButton(
-            text = if (isWeekend) "WEEKEND MODE" else "ACADEMIC CYCLE ACTIVE", 
+            text = if (isWeekend) "WEEKEND MODE"
+            else if (LocalTime.now() > LocalTime.of(16, 25)) "CLASSES OVER"
+            else "ACADEMIC CYCLE ACTIVE",
             onClick = {}, 
             containerColor = if (isWeekend) KiskiPurple else KiskiGreen,
             contentColor = KiskiWhite,
